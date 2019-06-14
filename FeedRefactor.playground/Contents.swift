@@ -150,23 +150,22 @@ class HomeViewController: UITableViewController {
     }
 }
 
+/// HomeCellTypeEnum
+enum HomeCellType {
+    case noLocationCell
+    case noCityCell
+    case cityCell(city: City)
+    
+    case noSocialServicesAddedCell
+    case socialServiceCell(service: String)
+    case friendCell(friend: User)
+}
 
 //TODO: 1 - create cellFactory ???
 // MARK: - Cell Factory
 
 class HomeCellFactory
 {
-    /// HomeCellTypeEnum
-    enum HomeCellType {
-        case noLocationCell
-        case cityCell(city: City)
-        case noCityCell
-        case socialServiceCell(service: String)
-        case noSocialServicesAddedCell
-        case friendCell(friend: User)
-    }
-
-    
     /// generates a cell by CellType and fills it with data
     ///
     /// - Parameter type: CellType
@@ -182,6 +181,8 @@ class HomeCellFactory
             return cell
         case .noCityCell:
             return UITableViewCell()
+            
+            //??? Separate into two ?!
         case .socialServiceCell(let service):
             let cell = UITableViewCell()
             cell.textLabel?.text = service
@@ -196,3 +197,132 @@ class HomeCellFactory
     }
 }
 
+
+//// MARK: - TVC Adapter - NOPE, will use service.
+//
+//import UIKit
+//
+//protocol HomeViewAdapterOutput {
+//}
+//
+//final class HomeTableViewAdapter: NSObject {
+//
+//    // MARK: - Constants
+//
+//    private let output: HomeViewAdapterOutput
+//
+//    // MARK: - Properties
+//
+//    private var location: HomeCellFactory.HomeCellType
+//
+//    /// for second section
+//    private var items: [HomeCellFactory.HomeCellType]
+//
+//    private (set) var tableView: UITableView {
+//        didSet {
+////            tableView.register(UINib(nibName: <#CellName#>, bundle: nil), forCellReuseIdentifier: <#CellName#>)
+//        }
+//    }
+//
+//    // MARK: - Initialization and deinitialization
+//
+//    init(output: HomeViewAdapterOutput) {
+//        self.output = output
+//    }
+//
+//    // MARK: - Internal helpers
+//
+//    func set(tableView: UITableView) {
+//        self.tableView = tableView
+//    }
+//
+//    func configure(with items: [HomeCellFactory.HomeCellType]) {
+//        self.items = items
+//    }
+//
+//}
+//
+//
+//// MARK: - UITableViewDataSource
+//
+//extension HomeTableViewAdapter: UITableViewDataSource {
+//    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+//        return items.count
+//    }
+//
+//    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+//        let cell = UITableViewCell()
+//        return cell
+//    }
+//}
+//
+//
+//// MARK: - UITableViewDelegate
+//
+//extension HomeTableViewAdapter: UITableViewDelegate {
+//    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+//        tableView.deselectRow(at: indexPath, animated: true)
+//    }
+//}
+
+
+final class HomeService {
+    private var dataStorage: DataStorage
+    private var user: User
+    
+    private var location: HomeCellType = .noCityCell
+    private var socials: [HomeCellType] = [ .noSocialServicesAddedCell ]
+    
+    
+    // MARK: - Initialization and deinitialization
+    
+    init(locationData: DataStorage = DataStorage.shared, user: User = User.currentUser()) {
+        self.dataStorage = locationData
+        self.user = user
+        
+        self.refreshData()
+    }
+    
+    func refreshData() {
+        self.location = getLocationData()
+        self.socials = getSocialData()
+    }
+    
+    private func getLocationData() -> HomeCellType {
+        if !dataStorage.isLocationServiceEnabled {
+            return .noLocationCell
+        }
+        
+        guard let city = dataStorage.currentCity else {
+            return .noCityCell
+        }
+        
+        return .cityCell(city: city)
+    }
+    
+    /// refreshes social data - socials and user's friends
+    private func getSocialData() -> [HomeCellType] {
+        var socialData: [HomeCellType] = [.noSocialServicesAddedCell]
+        
+        if user.addedSocialServices.count == 0 {
+            return socialData
+        }
+        
+        user.addedSocialServices.forEach { social in
+            socialData.append(.socialServiceCell(service: social))
+        }
+        
+        user.friends.forEach { (friend) in
+            socialData.append(.friendCell(friend: friend))
+        }
+        
+        return socialData
+    }
+    
+    func locationData() -> HomeCellType {
+        return self.location
+    }
+    func socialData() -> [HomeCellType] {
+        return self.socials
+    }
+}
