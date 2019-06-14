@@ -72,15 +72,30 @@ class HomeViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        if #available(iOS 10.0, *) {
+            tableView.refreshControl = innerRefreshControl
+        } else {
+            tableView.addSubview(innerRefreshControl)
+        }
+        
+        innerRefreshControl.addTarget(self, action: #selector(refreshData(_:)), for: .valueChanged)
+        
+    }
+    
+    //done: TVC refresh - pull services refresh ( dataService.refreshData(); tableVew.reloadData() )
+    //done: FUUUU%! I should implement table updtes due to state changes. BUT - hmmm...
+    private let innerRefreshControl = UIRefreshControl()
+    
+    //done: put in pull to refresh ?
+    @objc private func refreshData(_ sender: Any)  {
+        dataService.refreshData()
+        tableView.reloadData()
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 2
     }
-
-    //TODO: TVC refresh - pull services refresh ( dataService.refreshData(); tableVew.reloadData() )
-    //TODO: FUUUU%! I should implement table updtes due to state changes. BUT - hmmm...
-    
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         //HEEEERRRRREEEEESSSSYYY!!! But don't know where to move it. Probably to TVC refresh ?
