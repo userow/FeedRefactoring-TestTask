@@ -68,27 +68,19 @@ final class DataStorage {
 
 class HomeViewController: UITableViewController {
     
-    var isLocationEnabled: Bool = false
-    var hasFriends: Bool = false
-    var hasAddedSocialServices: Bool = false
-    var hasDeterminedCurrentCity: Bool = false
+    let dataService = HomeService()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        checkCurrentUserState()
-    }
-    
-    func checkCurrentUserState() {
-        isLocationEnabled = DataStorage.shared.isLocationServiceEnabled
-        hasDeterminedCurrentCity = DataStorage.shared.currentCity != nil
-        hasAddedSocialServices = User.currentUser().addedSocialServices.count > 0
-        hasFriends = User.currentUser().friends.count > 0
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 2
     }
 
+    //TODO: TVC refresh - pull services refresh ( dataService.refreshData(); tableVew.reloadData() )
+    //TODO: FUUUU%! I should implement table updtes due to state changes. BUT - hmmm...
+    
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         //HEEEERRRRREEEEESSSSYYY!!! But don't know where to move it. Probably to TVC refresh ?
@@ -96,54 +88,21 @@ class HomeViewController: UITableViewController {
 
         if section == 0 {
             return 1
-        } else {
-            var cellsCount = 0
-
-            if hasAddedSocialServices {
-                cellsCount += User.currentUser().addedSocialServices.count
-            }
-            
-            if hasFriends {
-                cellsCount += User.currentUser().friends.count
-            }
+        } else if section == 1 {
+            return dataService.socialData().count
         }
         
         return 0
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        checkCurrentUserState()
+        
         let currentSection = indexPath.section
 
         if currentSection == 0 {
-            if isLocationEnabled {
-                if hasDeterminedCurrentCity {
-                    return HomeCellFactory.getHomeCell(type: .cityCell(city: DataStorage.shared.currentCity!) )
-                } else {
-                    return HomeCellFactory.getHomeCell(type: .noCityCell)
-                }
-            } else {
-                return HomeCellFactory.getHomeCell(type: .noLocationCell)
-            }
-        } else {
-            let count = self.tableView(tableView, numberOfRowsInSection: currentSection)
-
-            if count == 0 {
-                return HomeCellFactory.getHomeCell(type: .noSocialServicesAddedCell)
-            } else {
-                let currentRow = indexPath.row
-
-                if hasAddedSocialServices && User.currentUser().addedSocialServices.count < currentRow {
-                    let currentSocialService = User.currentUser().addedSocialServices[currentRow]
-                    return HomeCellFactory.getHomeCell(type: .socialServiceCell(service: currentSocialService))
-                }
-
-                if hasFriends {
-                    let index = currentRow - User.currentUser().addedSocialServices.count
-                    let friend = User.currentUser().friends[index]
-                    return HomeCellFactory.getHomeCell(type: .friendCell(friend: friend))
-                }
-            }
+            return HomeCellFactory.getHomeCell(type: dataService.locationData())
+        } else if currentSection == 1 {
+            return HomeCellFactory.getHomeCell(type: dataService.socialData()[indexPath.row])
         }
         
         return UITableViewCell()
@@ -283,6 +242,7 @@ final class HomeService {
         self.refreshData()
     }
     
+    //public refresh
     func refreshData() {
         self.location = getLocationData()
         self.socials = getSocialData()
@@ -302,27 +262,32 @@ final class HomeService {
     
     /// refreshes social data - socials and user's friends
     private func getSocialData() -> [HomeCellType] {
-        var socialData: [HomeCellType] = [.noSocialServicesAddedCell]
         
-        if user.addedSocialServices.count == 0 {
-            return socialData
+        if user.addedSocialServices.count == 0 && user.friends.count == 0 {
+            return [.noSocialServicesAddedCell]
         }
+        var localSocialData: [HomeCellType] = []
         
         user.addedSocialServices.forEach { social in
-            socialData.append(.socialServiceCell(service: social))
+            localSocialData.append(.socialServiceCell(service: social))
         }
         
         user.friends.forEach { (friend) in
-            socialData.append(.friendCell(friend: friend))
+            localSocialData.append(.friendCell(friend: friend))
         }
         
-        return socialData
+        return localSocialData
     }
     
+    /// public immutable location
     func locationData() -> HomeCellType {
-        return self.location
+        let loc = self.location
+        return loc
     }
+    
+    /// public immutable socialData
     func socialData() -> [HomeCellType] {
-        return self.socials
+        let soc = self.socials
+        return soc
     }
 }
