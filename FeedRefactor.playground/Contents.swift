@@ -22,6 +22,25 @@
  
  *Your task for this case is to make changes to displayed feed easier. Also need to get rid of index calculations inside view controller.*
  */
+
+
+// PaulV:
+
+//TODO: 1 - create CellFactory
+//TODO: ??? cell Factory ??? should create data source for HomeTVC Or, move responsibility to some Service ?
+//TODO: transfer var-s to context - WRONG !  var-s changes are casued by checkCurrentUserState
+//TODO: instantiate HomeVC with context
+
+//TODO: ??? create TableAdapter - transfer TableDelegate and TableDataSource to Adapter
+//TODO: ?? all data related - to Data Service ??
+
+
+/*
+ Should move all state-related logic out of TVC.
+ TVC should only have list of DataItems.
+ */
+
+
 import UIKit
 
 final class City {
@@ -30,6 +49,8 @@ final class City {
 
 final class User {
     var addedSocialServices: [String] = []
+    
+    var name: String = ""
     
     var friends: [User] = []
     
@@ -68,8 +89,10 @@ class HomeViewController: UITableViewController {
         return 2
     }
 
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        checkCurrentUserState()
+        //HEEEERRRRREEEEESSSSYYY!!! But don't know where to move it. Probably to TVC refresh ?
+//        checkCurrentUserState()
 
         if section == 0 {
             return 1
@@ -91,62 +114,85 @@ class HomeViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         checkCurrentUserState()
         let currentSection = indexPath.section
-        
+
         if currentSection == 0 {
             if isLocationEnabled {
                 if hasDeterminedCurrentCity {
-                    return cityCell(city: DataStorage.shared.currentCity!)
+                    return HomeCellFactory.getHomeCell(type: .cityCell(city: DataStorage.shared.currentCity!) )
                 } else {
-                    return noCityCell()
+                    return HomeCellFactory.getHomeCell(type: .noCityCell)
                 }
             } else {
-                return noLocationCell()
+                return HomeCellFactory.getHomeCell(type: .noLocationCell)
             }
         } else {
             let count = self.tableView(tableView, numberOfRowsInSection: currentSection)
-            
+
             if count == 0 {
-                return noSocialServicesAddedCell()
+                return HomeCellFactory.getHomeCell(type: .noSocialServicesAddedCell)
             } else {
                 let currentRow = indexPath.row
-                
+
                 if hasAddedSocialServices && User.currentUser().addedSocialServices.count < currentRow {
                     let currentSocialService = User.currentUser().addedSocialServices[currentRow]
-                    return socialServiceCell(service: currentSocialService)
+                    return HomeCellFactory.getHomeCell(type: .socialServiceCell(service: currentSocialService))
                 }
-                
+
                 if hasFriends {
                     let index = currentRow - User.currentUser().addedSocialServices.count
                     let friend = User.currentUser().friends[index]
-                    return friendCell(friend: friend)
+                    return HomeCellFactory.getHomeCell(type: .friendCell(friend: friend))
                 }
             }
         }
         
         return UITableViewCell()
     }
-    
-    func noLocationCell() -> UITableViewCell {
-        return UITableViewCell()
+}
+
+
+//TODO: 1 - create cellFactory ???
+// MARK: - Cell Factory
+
+class HomeCellFactory
+{
+    /// HomeCellTypeEnum
+    enum HomeCellType {
+        case noLocationCell
+        case cityCell(city: City)
+        case noCityCell
+        case socialServiceCell(service: String)
+        case noSocialServicesAddedCell
+        case friendCell(friend: User)
     }
+
     
-    func cityCell(city: City) -> UITableViewCell {
-        return UITableViewCell()
-    }
-    
-    func noCityCell() -> UITableViewCell {
-        return UITableViewCell()
-    }
-    
-    func socialServiceCell(service: String) -> UITableViewCell {
-        return UITableViewCell()
-    }
-    
-    func noSocialServicesAddedCell() -> UITableViewCell {
-        return UITableViewCell()
-    }
-    
-    func friendCell(friend: User) -> UITableViewCell {
-        return UITableViewCell()
+    /// generates a cell by CellType and fills it with data
+    ///
+    /// - Parameter type: CellType
+    /// - Returns: TVC
+    class func getHomeCell(type: HomeCellType) -> UITableViewCell {
+        
+        switch type {
+        case .noLocationCell:
+            return UITableViewCell()
+        case .cityCell(let city):
+            let cell = UITableViewCell()
+            cell.textLabel?.text = city.name
+            return cell
+        case .noCityCell:
+            return UITableViewCell()
+        case .socialServiceCell(let service):
+            let cell = UITableViewCell()
+            cell.textLabel?.text = service
+            return cell
+        case .noSocialServicesAddedCell:
+            return UITableViewCell()
+        case .friendCell(let friend):
+            let cell = UITableViewCell()
+            cell.textLabel?.text = friend.name
+            return cell
+        }
     }
 }
+
